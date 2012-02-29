@@ -1,5 +1,5 @@
 name:                lzma-conduit
-version:             0.1.2
+version:             0.1.2.0
 synopsis:            Conduit interface for lzma/xz compression.
 description:
   High level bindings to xz-utils.
@@ -10,7 +10,7 @@ author:              Nathan Howell <nhowell@alphaheavy.com>
 maintainer:          Nathan Howell <nhowell@alphaheavy.com>
 homepage:            http://github.com/alphaHeavy/lzma-conduit
 bug-reports:         http://github.com/alphaHeavy/lzma-conduit/issues
-category:            Codec, Compression, Enumerator
+category:            Codec, Compression, Conduit
 
 build-type:          Simple
 cabal-version:       >= 1.10
