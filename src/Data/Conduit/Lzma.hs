@@ -16,7 +16,9 @@ import qualified Data.ByteString.Unsafe as B
 
 import Bindings.Lzma
 
-prettyRet :: C'lzma_ret -> String
+prettyRet
+  :: C'lzma_ret
+  -> String
 prettyRet r
   | r == c'LZMA_OK                = "Operation completed successfully"
   | r == c'LZMA_STREAM_END        = "End of stream was reached"
@@ -32,10 +34,15 @@ prettyRet r
   | r == c'LZMA_PROG_ERROR        = "Programming error"
   | otherwise                     = "Unknown LZMA error: "++show r
 
-bufferSize :: Num a => a
+bufferSize
+  :: Num a => a
 bufferSize = 4096
 
-memset :: forall a . Storable a => Ptr a -> Word8 -> IO ()
+memset
+  :: forall a . Storable a
+  => Ptr a
+  -> Word8
+  -> IO ()
 memset ptr val =
   forM_ [0..sizeOf (undefined :: a) - 1] $ \ i ->
     pokeByteOff ptr i val
@@ -57,10 +64,13 @@ initStream name fun = do
     , c'lzma_stream'total_out = 0 }
   ret <- fun streamPtr
   if ret == c'LZMA_OK
-    then return streamPtr
+    then return $! streamPtr
     else fail $ name ++ " failed: " ++ prettyRet ret
 
-easyEncoder :: Maybe Int -> Ptr C'lzma_stream -> IO C'lzma_ret
+easyEncoder
+  :: Maybe Int
+  -> Ptr C'lzma_stream
+  -> IO C'lzma_ret
 easyEncoder level ptr = c'lzma_easy_encoder ptr (maybe c'LZMA_PRESET_DEFAULT fromIntegral level) c'LZMA_CHECK_CRC64
 
 autoDecoder :: Maybe Word64 -> Ptr C'lzma_stream -> IO C'lzma_ret
@@ -94,7 +104,8 @@ lzmaConduit
   :: ResourceIO m
   => Ptr C'lzma_stream
   -> Conduit ByteString m ByteString
-lzmaConduit = liftM2 Conduit lzmaPush lzmaClose
+lzmaConduit =
+  liftM2 Conduit lzmaPush lzmaClose
 
 lzmaPush
   :: ResourceIO m
@@ -103,7 +114,7 @@ lzmaPush
   -> ResourceT m (ConduitResult ByteString m ByteString)
 lzmaPush streamPtr xs = do
   chunks <- liftIO $ codeEnum streamPtr xs
-  return $ Producing (lzmaConduit streamPtr) chunks
+  return $! Producing (lzmaConduit streamPtr) chunks
 
 lzmaClose
   :: Control.Monad.IO.Class.MonadIO m
@@ -148,7 +159,7 @@ codeStep streamPtr action status availIn availOut
   | availOut < bufferSize = do
       x <- getChunk streamPtr availOut
       if availIn == 0 -- no more input, stop processing
-        then return [x]
+        then return $! [x]
         else do
           -- run lzma_code forward just far enough to read all the input buffer
           xs <- unsafeInterleaveIO $ buildChunks streamPtr action status
@@ -163,7 +174,8 @@ codeStep streamPtr action status availIn availOut
         else fail $ "lzma_code failed: " ++ prettyRet ret
 
   -- nothing to do here
-  | otherwise = return []
+  | otherwise =
+      return []
 
 getChunk
   :: Ptr C'lzma_stream
@@ -178,6 +190,8 @@ getChunk streamPtr availOut
       pokeAvailOut streamPtr bufferSize
       -- B.pack* copies the buffer, so reuse it
       pokeNextOut streamPtr baseBuffer
-      return bs
-  | otherwise = return B.empty
+      return $! bs
+
+  | otherwise =
+      return $! B.empty
 
