@@ -64,17 +64,22 @@ initStream name fun = do
     , c'lzma_stream'total_out = 0 }
   ret <- fun streamPtr
   if ret == c'LZMA_OK
-    then return $! streamPtr
+    then return streamPtr
     else fail $ name ++ " failed: " ++ prettyRet ret
 
 easyEncoder
   :: Maybe Int
   -> Ptr C'lzma_stream
   -> IO C'lzma_ret
-easyEncoder level ptr = c'lzma_easy_encoder ptr (maybe c'LZMA_PRESET_DEFAULT fromIntegral level) c'LZMA_CHECK_CRC64
+easyEncoder level ptr =
+  c'lzma_easy_encoder ptr (maybe c'LZMA_PRESET_DEFAULT fromIntegral level) c'LZMA_CHECK_CRC64
 
-autoDecoder :: Maybe Word64 -> Ptr C'lzma_stream -> IO C'lzma_ret
-autoDecoder memlimit ptr = c'lzma_auto_decoder ptr (maybe maxBound fromIntegral memlimit) 0
+autoDecoder
+  :: Maybe Word64
+  -> Ptr C'lzma_stream
+  -> IO C'lzma_ret
+autoDecoder memlimit ptr =
+  c'lzma_auto_decoder ptr (maybe maxBound fromIntegral memlimit) 0
 
 -- | Decompress a 'ByteString' from a lzma or xz container stream.
 decompress
@@ -117,7 +122,7 @@ lzmaPush streamPtr xs = do
   return $! Producing (lzmaConduit streamPtr) chunks
 
 lzmaClose
-  :: Control.Monad.IO.Class.MonadIO m
+  :: MonadIO m
   => Ptr C'lzma_stream
   -> m [ByteString]
 lzmaClose streamPtr = liftIO $
@@ -159,10 +164,11 @@ codeStep streamPtr action status availIn availOut
   | availOut < bufferSize = do
       x <- getChunk streamPtr availOut
       if availIn == 0 -- no more input, stop processing
-        then return $! [x]
+        then return [x]
         else do
           -- run lzma_code forward just far enough to read all the input buffer
-          xs <- unsafeInterleaveIO $ buildChunks streamPtr action status
+          -- xs <- unsafeInterleaveIO $ buildChunks streamPtr action status
+          xs <- buildChunks streamPtr action status
           return $! x:xs
 
   -- the input buffer points into a pinned bytestring, so we need to make sure it's been
@@ -190,8 +196,8 @@ getChunk streamPtr availOut
       pokeAvailOut streamPtr bufferSize
       -- B.pack* copies the buffer, so reuse it
       pokeNextOut streamPtr baseBuffer
-      return $! bs
+      return bs
 
   | otherwise =
-      return $! B.empty
+      return B.empty
 
