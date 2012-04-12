@@ -1,5 +1,5 @@
 name:                lzma-conduit
-version:             0.4.1
+version:             0.4.2
 synopsis:            Conduit interface for lzma/xz compression.
 description:
   High level bindings to xz-utils.
@@ -32,7 +32,6 @@ library
     bytestring        >= 0.9.1  && < 0.10,
     conduit           == 0.4.*,
     resourcet         == 0.3.*,
-    transformers-base == 0.4.*,
     transformers      >= 0.2    && < 0.4
   ghc-options:
     -Wall

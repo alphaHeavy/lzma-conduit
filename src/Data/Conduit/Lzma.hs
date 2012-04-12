@@ -4,7 +4,7 @@
 module Data.Conduit.Lzma (compress, decompress) where
 
 import Control.Monad (forM_, liftM2)
-import Control.Monad.Base (liftBase)
+import Control.Monad.IO.Class (liftIO)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.Trans.Resource
 import Data.ByteString (ByteString)
@@ -85,7 +85,7 @@ autoDecoder memlimit ptr =
 
 -- | Decompress a 'ByteString' from a lzma or xz container stream.
 decompress
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Maybe Word64 -- ^ Memory limit, in bytes.
   -> Conduit ByteString m ByteString
 decompress memlimit = NeedInput initPush (return ()) where
@@ -97,7 +97,7 @@ decompress memlimit = NeedInput initPush (return ()) where
 
 -- | Compress a 'ByteString' into a xz container stream.
 compress
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Maybe Int -- ^ Compression level from [0..9], defaults to 6.
   -> Conduit ByteString m ByteString
 compress level = NeedInput initPush (return ()) where
@@ -108,47 +108,47 @@ compress level = NeedInput initPush (return ()) where
     codeEnum streamPtr input
 
 lzmaConduit
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Ptr C'lzma_stream
   -> Conduit ByteString m ByteString
 lzmaConduit =
   liftM2 NeedInput codeEnum lzmaClose
 
 lzmaClose
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Ptr C'lzma_stream
   -> Conduit ByteString m ByteString
 lzmaClose streamPtr =
   buildChunks streamPtr c'LZMA_FINISH c'LZMA_OK
 
 codeEnum
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Ptr C'lzma_stream
   -> ByteString
   -> Conduit B.ByteString m B.ByteString
 codeEnum streamPtr chunk@(PS fptr _ _) = do
-  liftBase $ do
+  liftIO $ do
     -- let the bytestring library calculate the chunk length
     (ptr, len) <- B.unsafeUseAsCStringLen chunk return
     pokeNextIn streamPtr ptr
     pokeAvailIn streamPtr $ fromIntegral len
 
   buildChunks streamPtr c'LZMA_RUN c'LZMA_OK
-  liftBase $ touchForeignPtr fptr
+  liftIO $ touchForeignPtr fptr
 
 buildChunks
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Ptr C'lzma_stream
   -> C'lzma_action
   -> C'lzma_ret
   -> Conduit B.ByteString m B.ByteString
 buildChunks streamPtr action status = do
-  availIn <- liftBase $ peekAvailIn streamPtr
-  availOut <- liftBase $ peekAvailOut streamPtr
+  availIn <- liftIO $ peekAvailIn streamPtr
+  availOut <- liftIO $ peekAvailOut streamPtr
   codeStep streamPtr action status availIn availOut
 
 codeStep
-  :: (MonadResource m, MonadBaseControl IO m)
+  :: (MonadResource m)
   => Ptr C'lzma_stream
   -> C'lzma_action
   -> C'lzma_ret
@@ -162,13 +162,13 @@ codeStep streamPtr action status availIn availOut
 
   -- the normal case, we have some results..
   | availOut < bufferSize = do
-      x <- liftBase $ getChunk streamPtr availOut
+      x <- liftIO $ getChunk streamPtr availOut
       HaveOutput (buildChunks streamPtr action status) (return ()) x
 
   -- the input buffer points into a pinned bytestring, so we need to make sure it's been
   -- fully loaded (availIn == 0) before returning
   | availIn > 0 || action == c'LZMA_FINISH = do
-      ret <- liftBase $ c'lzma_code streamPtr action
+      ret <- liftIO $ c'lzma_code streamPtr action
       if ret == c'LZMA_OK || ret == c'LZMA_STREAM_END
         then buildChunks streamPtr action ret
         else fail $ "lzma_code failed: " ++ prettyRet ret
