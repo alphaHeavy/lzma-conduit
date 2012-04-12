@@ -1,5 +1,5 @@
 name:                lzma-conduit
-version:             0.1.2.2
+version:             0.4.0
 synopsis:            Conduit interface for lzma/xz compression.
 description:
   High level bindings to xz-utils.
@@ -27,11 +27,13 @@ library
     Bindings.Lzma
     Data.Conduit.Lzma
   build-depends:
-    base         >= 3      && < 5,
-    bindings-DSL >= 1.0    && < 1.1,
-    bytestring   >= 0.9.1  && < 0.10,
-    conduit      >= 0.2.2  && < 0.3,
-    transformers == 0.2.*
+    base              >= 3      && < 5,
+    bindings-DSL      >= 1.0    && < 1.1,
+    bytestring        >= 0.9.1  && < 0.10,
+    conduit           == 0.4.0.*,
+    resourcet         == 0.3.*,
+    transformers-base == 0.4.*,
+    transformers      >= 0.2    && < 0.4
   ghc-options:
     -Wall
   includes:
