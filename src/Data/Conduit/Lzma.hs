@@ -12,7 +12,6 @@ import Data.ByteString.Internal (ByteString(PS))
 import Data.Conduit
 import Foreign
 import Foreign.C.Types (CSize)
-import Debug.Trace (trace)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
@@ -175,7 +174,6 @@ codeStep
   -> Conduit B.ByteString m B.ByteString
 codeStep streamKey streamPtr action status availIn availOut
   -- the inner enumerator has finished and we're done flushing the coder
-  | trace ("availIn: " ++ show availIn ++ ", availOut: " ++ show availOut) False = undefined
   | availOut == bufferSize && status == c'LZMA_STREAM_END = do
       lift $ release streamKey
       return ()
