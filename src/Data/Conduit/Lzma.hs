@@ -11,7 +11,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Internal (ByteString(PS))
 import Data.Conduit
 import Foreign
-import Foreign.C.Types (CSize)
+import Foreign.C.Types (CSize, CUChar)
 
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Unsafe as B
@@ -52,7 +52,7 @@ memset ptr val =
 initStream
   :: String
   -> (Ptr C'lzma_stream -> IO C'lzma_ret)
-  -> IO (Ptr C'lzma_stream)
+  -> IO (Ptr C'lzma_stream, Ptr CUChar)
 initStream name fun = do
   buffer <- mallocBytes bufferSize
   streamPtr <- malloc
@@ -66,7 +66,7 @@ initStream name fun = do
     , c'lzma_stream'total_out = 0 }
   ret <- fun streamPtr
   if ret == c'LZMA_OK
-    then return streamPtr
+    then return (streamPtr, buffer)
     else fail $ name ++ " failed: " ++ prettyRet ret
 
 easyEncoder
@@ -93,9 +93,9 @@ decompress memlimit = do
   mval <- await
   case mval of
     Just input -> do
-      (streamKey, streamPtr) <- lift $ allocate
+      (streamKey, (streamPtr, _)) <- lift $ allocate
         (initStream "lzma_auto_decoder" (autoDecoder memlimit))
-        (\ ptr -> c'lzma_end ptr >> free ptr)
+        (\ (streamPtr, buffer) -> c'lzma_end streamPtr >> free streamPtr >> free buffer)
       codeEnum streamKey streamPtr input
 
     Nothing -> return ()
@@ -109,9 +109,9 @@ compress level = do
   mval <- await
   case mval of
     Just input -> do
-      (streamKey, streamPtr) <- lift $ allocate
+      (streamKey, (streamPtr, _)) <- lift $ allocate
         (initStream "lzma_easy_encoder" (easyEncoder level))
-        (\ ptr -> c'lzma_end ptr >> free ptr)
+        (\ (streamPtr, buffer) -> c'lzma_end streamPtr >> free streamPtr >> free buffer)
       codeEnum streamKey streamPtr input
 
     Nothing -> return ()
