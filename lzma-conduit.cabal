@@ -1,5 +1,5 @@
 name:                lzma-conduit
-version:             0.5.2.1
+version:             0.5.2.2
 synopsis:            Conduit interface for lzma/xz compression.
 description:
   High level bindings to xz-utils.

@@ -34,6 +34,12 @@ module Bindings.Lzma where
 #num LZMA_FULL_FLUSH
 #num LZMA_FINISH
 
+-- lzma_flags
+#num LZMA_TELL_NO_CHECK
+#num LZMA_TELL_UNSUPPORTED_CHECK
+#num LZMA_TELL_ANY_CHECK
+#num LZMA_CONCATENATED
+
 -- lzma_check
 #integral_t lzma_check
 #num LZMA_CHECK_NONE

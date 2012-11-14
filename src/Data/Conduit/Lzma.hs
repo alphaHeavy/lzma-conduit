@@ -82,7 +82,7 @@ autoDecoder
   -> Ptr C'lzma_stream
   -> IO C'lzma_ret
 autoDecoder memlimit ptr =
-  c'lzma_auto_decoder ptr (maybe maxBound fromIntegral memlimit) 0
+  c'lzma_auto_decoder ptr (maybe maxBound fromIntegral memlimit) c'LZMA_CONCATENATED
 
 -- | Decompress a 'ByteString' from a lzma or xz container stream.
 decompress
