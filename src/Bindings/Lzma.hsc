@@ -1,9 +1,3 @@
-{-|
-For a high-level description of the C API, refer to the README file
-included in the liblinear archive, available for download at
-<http://www.csie.ntu.edu.tw/~cjlin/liblinear/>.
--}
-
 #include <stdio.h>
 #include <string.h>
 #include <bindings.dsl.h>
