@@ -3,6 +3,7 @@ import Test.Framework.Providers.HUnit
 import Test.Framework.Providers.QuickCheck2 (testProperty)
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
+import Control.Monad.Trans.Resource
 
 import qualified Data.ByteString as B
 import qualified Data.Conduit as C
@@ -44,40 +45,40 @@ someBigString = resize (8*1024) someString
 
 prop_compressAndDiscard :: Property
 prop_compressAndDiscard = monadicIO . forAllM someBigString $ \ str -> do
-  run . C.runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.sinkNull
+  run . runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.sinkNull
 
 prop_compressAndCheckLength :: Property
 prop_compressAndCheckLength = monadicIO . forAllM someBigString $ \ str -> do
-  len <- run . C.runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.fold (\ acc el -> acc + B.length el) 0
+  len <- run . runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.fold (\ acc el -> acc + B.length el) 0
   assert (len - 32 > B.length str `div` 2) -- random strings don't compress very well
 
 prop_chain :: Property
 prop_chain = monadicIO . forAllM someBigString $ \ str -> do
-  str' <- run . C.runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= decompress Nothing C.=$= Cl.consume
+  str' <- run . runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= decompress Nothing C.=$= Cl.consume
   return $ str == B.concat str'
 
 prop_compressThenDecompress :: Property
 prop_compressThenDecompress = monadicIO . forAllM someBigString $ \ str -> do
-  blob <- run . C.runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.consume
+  blob <- run . runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.consume
   let blob' = B.concat blob
   randIdx <- pick $ elements [0..B.length blob'-1]
   let resplit = let (x,y) = B.splitAt randIdx blob' in [x,y]
-  str' <- run . C.runResourceT $ Cl.sourceList resplit C.$$ decompress Nothing C.=$= Cl.consume
+  str' <- run . runResourceT $ Cl.sourceList resplit C.$$ decompress Nothing C.=$= Cl.consume
   return $ str == B.concat str'
 
 prop_decompressRandom :: Property
 prop_decompressRandom = expectFailure . monadicIO . forAllM someBigString $ \ str -> do
-  header <- run . C.runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
+  header <- run . runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
   let blob = header ++ [str]
-  run $ C.runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
+  run $ runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
 
 prop_decompressCorrupt :: Property
 prop_decompressCorrupt = expectFailure . monadicIO . forAllM someBigString $ \ str -> do
-  header <- run . C.runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
+  header <- run . runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
   let header' = B.concat header
   randVal <- pick $ elements [0..255::Word8]
   randIdx <- pick $ elements [0..B.length header'-1]
   let (left, right) = B.splitAt randIdx header'
       updated = left `B.append` (randVal `B.cons` B.tail right)
       blob = [updated, str]
-  run $ C.runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
+  run $ runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
