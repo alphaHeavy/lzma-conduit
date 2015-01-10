@@ -132,8 +132,9 @@ lzmaClose
   => ReleaseKey
   -> Ptr C'lzma_stream
   -> Conduit ByteString m ByteString
-lzmaClose streamKey streamPtr =
-  buildChunks streamKey streamPtr c'LZMA_FINISH c'LZMA_OK
+lzmaClose streamKey streamPtr = do
+  inputKey <- lift . register $ return ()
+  buildChunks streamKey inputKey streamPtr c'LZMA_FINISH c'LZMA_OK
 
 codeEnum
   :: (MonadResource m)
@@ -148,52 +149,58 @@ codeEnum streamKey streamPtr chunk@(PS fptr _ _) = do
     pokeNextIn streamPtr ptr
     pokeAvailIn streamPtr $ fromIntegral len
 
-  buildChunks streamKey streamPtr c'LZMA_RUN c'LZMA_OK
-  liftIO $ touchForeignPtr fptr
+  inputKey <- lift . register $ touchForeignPtr fptr
+
+  buildChunks streamKey inputKey streamPtr c'LZMA_RUN c'LZMA_OK
 
 buildChunks
   :: (MonadResource m)
   => ReleaseKey
+  -> ReleaseKey
   -> Ptr C'lzma_stream
   -> C'lzma_action
   -> C'lzma_ret
   -> Conduit B.ByteString m B.ByteString
-buildChunks streamKey streamPtr action status = do
+buildChunks streamKey inputKey streamPtr action status = do
   availIn <- liftIO $ peekAvailIn streamPtr
   availOut <- liftIO $ peekAvailOut streamPtr
-  codeStep streamKey streamPtr action status availIn availOut
+  codeStep streamKey inputKey streamPtr action status availIn availOut
 
 codeStep
   :: (MonadResource m)
   => ReleaseKey
+  -> ReleaseKey
   -> Ptr C'lzma_stream
   -> C'lzma_action
   -> C'lzma_ret
   -> CSize
   -> CSize
   -> Conduit B.ByteString m B.ByteString
-codeStep streamKey streamPtr action status availIn availOut
+codeStep streamKey inputKey streamPtr action status availIn availOut
   -- the inner enumerator has finished and we're done flushing the coder
   | availOut == bufferSize && status == c'LZMA_STREAM_END = do
-      lift $ release streamKey
+      lift $ do
+        release inputKey
+        release streamKey
       return ()
 
   -- the normal case, we have some results..
   | availOut < bufferSize = do
       x <- liftIO $ getChunk streamPtr availOut
       yield x
-      buildChunks streamKey streamPtr action status
+      buildChunks streamKey inputKey streamPtr action status
 
   -- the input buffer points into a pinned bytestring, so we need to make sure it's been
   -- fully loaded (availIn == 0) before returning
   | availIn > 0 || action == c'LZMA_FINISH = do
       ret <- liftIO $ c'lzma_code streamPtr action
       if ret == c'LZMA_OK || ret == c'LZMA_STREAM_END
-        then buildChunks streamKey streamPtr action ret
+        then buildChunks streamKey inputKey streamPtr action ret
         else fail $ "lzma_code failed: " ++ prettyRet ret
 
   -- nothing to do here
-  | otherwise =
+  | otherwise = do
+      lift $ release inputKey
       lzmaConduit streamKey streamPtr
 
 getChunk
