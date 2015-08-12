@@ -50,7 +50,9 @@ prop_compressAndDiscard = monadicIO . forAllM someBigString $ \ str -> do
 prop_compressAndCheckLength :: Property
 prop_compressAndCheckLength = monadicIO . forAllM someBigString $ \ str -> do
   len <- run . runResourceT $ Cl.sourceList [str] C.$$ compress Nothing C.=$= Cl.fold (\ acc el -> acc + B.length el) 0
-  assert (len - 32 > B.length str `div` 2) -- random strings don't compress very well
+  -- random strings don't compress very well
+  assert (len > B.length str `div` 2)
+  assert (len - 64 < B.length str * 2)
 
 prop_chain :: Property
 prop_chain = monadicIO . forAllM someBigString $ \ str -> do
