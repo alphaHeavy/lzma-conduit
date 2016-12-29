@@ -67,7 +67,7 @@ initStream name fun = do
   ret <- fun streamPtr
   if ret == c'LZMA_OK
     then return (streamPtr, buffer)
-    else fail $ name ++ " failed: " ++ prettyRet ret
+    else monadThrow $ userError $ name ++ " failed: " ++ prettyRet ret
 
 easyEncoder
   :: Maybe Int
@@ -196,7 +196,7 @@ codeStep streamKey inputKey streamPtr action status availIn availOut
       ret <- liftIO $ c'lzma_code streamPtr action
       if ret == c'LZMA_OK || ret == c'LZMA_STREAM_END
         then buildChunks streamKey inputKey streamPtr action ret
-        else fail $ "lzma_code failed: " ++ prettyRet ret
+        else monadThrow $ userError $ "lzma_code failed: " ++ prettyRet ret
 
   -- nothing to do here
   | otherwise = do

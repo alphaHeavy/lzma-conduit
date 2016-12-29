@@ -8,9 +8,11 @@ import Control.Monad.Trans.Resource
 import qualified Data.ByteString as B
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as Cl
+import Data.Either (isLeft)
 import Data.List
 import Data.Word
 import Data.Conduit.Lzma
+import System.IO.Error (tryIOError)
 
 main = defaultMain tests
 
@@ -28,6 +30,7 @@ compressTests =
 decompressTests =
   [ testProperty "decompressRandom" prop_decompressRandom
   , testProperty "decompressCorrupt" prop_decompressCorrupt
+  , testProperty "decompressIOError" prop_decompressIOError
   ]
 
 chainedTests =
@@ -84,3 +87,10 @@ prop_decompressCorrupt = expectFailure . monadicIO . forAllM someBigString $ \ s
       updated = left `B.append` (randVal `B.cons` B.tail right)
       blob = [updated, str]
   run $ runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
+
+prop_decompressIOError :: Property
+prop_decompressIOError = monadicIO . forAllM someBigString $ \ str -> do
+  let blob = [B.pack [0]]
+  ioErrorE <- run $
+    tryIOError (runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull)
+  assert $ isLeft ioErrorE
