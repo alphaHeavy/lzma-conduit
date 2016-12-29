@@ -10,6 +10,7 @@ import Control.Monad.Trans.Resource
 import Data.ByteString (ByteString)
 import Data.ByteString.Internal (ByteString(PS))
 import Data.Conduit
+import Data.Maybe (fromMaybe)
 import Foreign
 import Foreign.C.Types (CSize, CUChar)
 
@@ -98,7 +99,7 @@ decompress memlimit = do
         (\ (streamPtr, buffer) -> c'lzma_end streamPtr >> free streamPtr >> free buffer)
       codeEnum streamKey streamPtr input
 
-    Nothing -> return ()
+    Nothing -> monadThrow $ userError $ "decompress: invalid empty input"
 
 -- | Compress a 'ByteString' into a xz container stream.
 compress
@@ -107,14 +108,12 @@ compress
   -> Conduit ByteString m ByteString
 compress level = do
   mval <- await
-  case mval of
-    Just input -> do
-      (streamKey, (streamPtr, _)) <- lift $ allocate
-        (initStream "lzma_easy_encoder" (easyEncoder level))
-        (\ (streamPtr, buffer) -> c'lzma_end streamPtr >> free streamPtr >> free buffer)
-      codeEnum streamKey streamPtr input
-
-    Nothing -> return ()
+  process $ fromMaybe B.empty mval
+  where process input = do
+          (streamKey, (streamPtr, _)) <- lift $ allocate
+            (initStream "lzma_easy_encoder" (easyEncoder level))
+            (\ (streamPtr, buffer) -> c'lzma_end streamPtr >> free streamPtr >> free buffer)
+          codeEnum streamKey streamPtr input
 
 lzmaConduit
   :: (MonadResource m)
