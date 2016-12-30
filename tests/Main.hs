@@ -30,7 +30,7 @@ compressTests =
 decompressTests =
   [ testProperty "decompressRandom" prop_decompressRandom
   , testProperty "decompressCorrupt" prop_decompressCorrupt
-  , testProperty "decompressIOError" prop_decompressIOError
+  , testProperty "decompressEmpty" prop_decompressEmpty
   ]
 
 chainedTests =
@@ -72,13 +72,15 @@ prop_compressThenDecompress = monadicIO . forAllM someBigString $ \ str -> do
   return $ str == B.concat str'
 
 prop_decompressRandom :: Property
-prop_decompressRandom = expectFailure . monadicIO . forAllM someBigString $ \ str -> do
+prop_decompressRandom = monadicIO . forAllM someBigString $ \ str -> do
   header <- run . runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
   let blob = header ++ [str]
-  run $ runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
+  ioErrorE <- run $
+    tryIOError (runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull)
+  assert $ isLeft ioErrorE
 
 prop_decompressCorrupt :: Property
-prop_decompressCorrupt = expectFailure . monadicIO . forAllM someBigString $ \ str -> do
+prop_decompressCorrupt = monadicIO . forAllM someBigString $ \ str -> do
   header <- run . runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
   let header' = B.concat header
   randVal <- pick $ elements [0..255::Word8]
@@ -86,11 +88,14 @@ prop_decompressCorrupt = expectFailure . monadicIO . forAllM someBigString $ \ s
   let (left, right) = B.splitAt randIdx header'
       updated = left `B.append` (randVal `B.cons` B.tail right)
       blob = [updated, str]
-  run $ runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull
+  ioErrorE <- run $
+    tryIOError (runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull)
+  assert $ isLeft ioErrorE
 
-prop_decompressIOError :: Property
-prop_decompressIOError = monadicIO . forAllM someBigString $ \ str -> do
-  let blob = [B.pack [0]]
+prop_decompressEmpty :: Property
+prop_decompressEmpty = monadicIO . forAllM someBigString $ \ str -> do
+  count <- pick $ elements [0..10]
+  let blob = replicate count B.empty
   ioErrorE <- run $
     tryIOError (runResourceT $ Cl.sourceList blob C.$$ decompress Nothing C.=$= Cl.sinkNull)
   assert $ isLeft ioErrorE
