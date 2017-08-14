@@ -8,7 +8,7 @@ import Control.Monad.Trans.Resource
 import qualified Data.ByteString as B
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as Cl
-import Data.Either (isLeft)
+import Data.Either.Compat (isLeft)
 import Data.List
 import Data.Word
 import Data.Conduit.Lzma

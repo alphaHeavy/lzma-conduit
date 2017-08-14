@@ -55,6 +55,7 @@ test-suite lzma-test
   build-depends:
     lzma-conduit,
     base                       >= 3      && < 5,
+    base-compat,
     bytestring,
     conduit,
     resourcet,
