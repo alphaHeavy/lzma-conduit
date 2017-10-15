@@ -25,21 +25,16 @@ library
   hs-source-dirs:
     src
   exposed-modules:
-    Bindings.Lzma
     Data.Conduit.Lzma
   build-depends:
     base              >= 3      && < 5,
-    bindings-DSL      >= 1.0    && < 1.1,
     bytestring        >= 0.9.1  && < 0.11,
-    conduit           >= 0.4    && < 1.3,
-    resourcet         >= 0.3    && < 1.2,
+    conduit           >= 1.0    && < 1.3,
+    lzma              >= 0.0.0.3 && < 0.1,
+    resourcet         >= 0.4    && < 1.2,
     transformers      >= 0.2    && < 0.6
   ghc-options:
     -Wall
-  includes:
-    lzma.h
-  extra-libraries:
-    lzma
 
 test-suite lzma-test
   default-language:
