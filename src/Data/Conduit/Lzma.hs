@@ -32,7 +32,7 @@ prettyRet r = case r of
 decompress
   :: (MonadThrow m, MonadIO m)
   => Maybe Word64 -- ^ Memory limit, in bytes.
-  -> Conduit ByteString m ByteString
+  -> ConduitM ByteString ByteString m ()
 decompress memlimit =
     decompressWith Lzma.defaultDecompressParams
                    { Lzma.decompressMemLimit     = fromMaybe maxBound memlimit
@@ -43,11 +43,11 @@ decompress memlimit =
 decompressWith
   :: (MonadThrow m, MonadIO m)
   => Lzma.DecompressParams
-  -> Conduit ByteString m ByteString
+  -> ConduitM ByteString ByteString m ()
 decompressWith parms = do
     c <- peek
     case c of
-      Nothing -> monadThrow $ userError $ "Data.Conduit.Lzma.decompress: invalid empty input"
+      Nothing -> throwM $ userError $ "Data.Conduit.Lzma.decompress: invalid empty input"
       Just _  -> liftIO (Lzma.decompressIO parms) >>= go
   where
     go s@(Lzma.DecompressInputRequired more) = do
@@ -65,14 +65,14 @@ decompressWith parms = do
           then App.pure ()
           else leftover rest
     go (Lzma.DecompressStreamError err) =
-        monadThrow $ userError $ "Data.Conduit.Lzma.decompress: error: "++prettyRet err
+        throwM $ userError $ "Data.Conduit.Lzma.decompress: error: "++prettyRet err
 
 
 -- | Compress a 'ByteString' into a xz container stream.
 compress
   :: (MonadIO m)
   => Maybe Int -- ^ Compression level from [0..9], defaults to 6.
-  -> Conduit ByteString m ByteString
+  -> ConduitM ByteString ByteString m ()
 compress level =
    -- mval <- await
    -- undefined $ fromMaybe B.empty mval
@@ -85,7 +85,7 @@ compress level =
 compressWith
   :: MonadIO m
   => Lzma.CompressParams
-  -> Conduit ByteString m ByteString
+  -> ConduitM ByteString ByteString m ()
 compressWith parms = do
     s <- liftIO (Lzma.compressIO parms)
     go s
