@@ -1,4 +1,4 @@
-module Data.Conduit.Lzma (compress, decompress) where
+module Data.Conduit.Lzma (compress, compressWith, decompress) where
 
 import qualified Codec.Compression.Lzma       as Lzma
 import           Control.Applicative          as App
