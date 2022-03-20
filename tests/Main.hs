@@ -93,7 +93,7 @@ prop_decompressCorrupt = monadicIO . forAllM someBigString $ \ str -> do
   assert $ isLeft ioErrorE
 
 prop_decompressEmpty :: Property
-prop_decompressEmpty = monadicIO . forAllM someBigString $ \ str -> do
+prop_decompressEmpty = monadicIO $ do
   count <- pick $ elements [0..10]
   let blob = replicate count B.empty
   ioErrorE <- run $
