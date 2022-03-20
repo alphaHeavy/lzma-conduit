@@ -73,6 +73,9 @@ prop_compressThenDecompress = monadicIO . forAllM someBigString $ \ str -> do
 
 prop_decompressRandom :: Property
 prop_decompressRandom = monadicIO . forAllM someBigString $ \ str -> do
+  -- The someBigString is not necessarily big. It can even be the empty string
+  -- https://github.com/alphaHeavy/lzma-conduit/issues/19
+  pre $ B.length str > 64
   header <- run . runResourceT $ Cl.sourceList [] C.$$ compress Nothing C.=$= Cl.consume
   let blob = header ++ [str]
   ioErrorE <- run $
