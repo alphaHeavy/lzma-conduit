@@ -1,6 +1,6 @@
 cabal-version:       1.12
 name:                lzma-conduit
-version:             1.2.2
+version:             1.2.3
 synopsis:            Conduit interface for lzma/xz compression.
 description:
   This package provides an Conduit interface for the LZMA compression algorithm used in the .xz file format.
