@@ -1,4 +1,4 @@
-# GitHub Copilot Instructions for lzma-conduit
+# AI Agent Instructions for lzma-conduit
 
 ## Project Overview
 
