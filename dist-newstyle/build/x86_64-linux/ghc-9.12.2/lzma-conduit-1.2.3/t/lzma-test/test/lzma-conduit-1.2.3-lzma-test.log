@@ -1,0 +1,21 @@
+Test suite lzma-test: RUNNING...
+Compress:
+  compressAndDiscard: [OK, passed 100 tests]
+  compressAndCheckLength: [Failed]
+*** Failed! Assertion failed (after 4 tests):
+"\r2"
+(used seed 3407166878213141461)
+Decompress:
+  decompressRandom: [OK, passed 100 tests]
+  decompressCorrupt: [OK, passed 100 tests]
+  decompressEmpty: [OK, passed 100 tests]
+Chained:
+  chain: [OK, passed 100 tests]
+  compressThenDecompress: [OK, passed 100 tests]
+
+         Properties  Total 
+ Passed  6           6     
+ Failed  1           1     
+ Total   7           7     
+Test suite lzma-test: FAIL
+Test suite logged to: /home/runner/work/lzma-conduit/lzma-conduit/./dist-newstyle/build/x86_64-linux/ghc-9.12.2/lzma-conduit-1.2.3/t/lzma-test/test/lzma-conduit-1.2.3-lzma-test.log
